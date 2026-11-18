@@ -1,0 +1,44 @@
+:root {
+  --bg: #eef1f5; --panel: #fff; --ink: #19212e; --muted: #5b6778; --line: #d5dbe4; --accent: #0f766e;
+  --easy: #1f7a4d; --medium: #a15c07; --hard: #b3261e;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 'IBM Plex Sans', system-ui, sans-serif; }
+a { color: inherit; text-decoration: none; }
+h1 { font-size: 1.4rem; margin: 0 0 .5rem; }
+.topbar { background: var(--ink); padding: .75rem 1.5rem; font-weight: 600; }
+.topbar a { color: #fff; }
+main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+.muted { color: var(--muted); }
+.status { padding: 1rem 0; }
+.error { color: var(--hard); }
+.chip { font-size: .8rem; font-weight: 500; padding: .1rem .55rem; border: 1px solid currentColor; border-radius: 99px; }
+.chip.easy { color: var(--easy); } .chip.medium { color: var(--medium); } .chip.hard { color: var(--hard); }
+
+.list { max-width: 640px; }
+.list ul { list-style: none; padding: 0; margin: 1.5rem 0; }
+.list li a { display: flex; justify-content: space-between; align-items: center; background: var(--panel); border: 1px solid var(--line); padding: .9rem 1.1rem; margin-bottom: .6rem; border-radius: 6px; }
+.list li a:hover, .list li a:focus-visible { border-color: var(--accent); outline: none; }
+
+.workspace { display: grid; grid-template-columns: 1fr 380px; gap: 1.25rem; align-items: start; }
+.work-left { display: grid; gap: 1rem; }
+.problem, .chat { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+.problem { padding: 1.25rem; }
+.problem pre { background: var(--bg); padding: .75rem; border-radius: 4px; font: 14px 'IBM Plex Mono', monospace; overflow-x: auto; white-space: pre-wrap; }
+.editor { width: 100%; min-height: 320px; padding: 1rem; border: 1px solid var(--line); border-radius: 6px; font: 14px/1.5 'IBM Plex Mono', monospace; resize: vertical; tab-size: 2; }
+.editor:focus, .chat-form input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+.chat { display: flex; flex-direction: column; height: min(75vh, 680px); position: sticky; top: 1rem; }
+.chat-log { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: .6rem; }
+.bubble { margin: 0; padding: .6rem .8rem; border-radius: 6px; white-space: pre-wrap; max-width: 92%; }
+.bubble.user { align-self: flex-end; background: var(--ink); color: #fff; }
+.bubble.assistant { background: var(--bg); border-left: 3px solid var(--accent); }
+.chat-form { display: flex; gap: .5rem; padding: .75rem; border-top: 1px solid var(--line); }
+.chat-form input { flex: 1; padding: .55rem .7rem; border: 1px solid var(--line); border-radius: 4px; font: inherit; }
+.chat-form button { padding: .55rem 1rem; background: var(--accent); color: #fff; border: 0; border-radius: 4px; font: inherit; font-weight: 500; cursor: pointer; }
+.chat-form button:disabled { opacity: .5; cursor: not-allowed; }
+
+@media (max-width: 860px) {
+  .workspace { grid-template-columns: 1fr; }
+  .chat { position: static; height: 480px; }
+}

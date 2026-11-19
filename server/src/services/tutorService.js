@@ -1,9 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { HttpError } from '../middleware/errorHandler.js';
 
-// With no API key we run in demo mode, so the app can be tried for free.
-const client = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
-const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5';
+// Which AI answers: set TUTOR_PROVIDER to 'gemini' or 'anthropic', or let it follow
+// whichever API key is present. With no key at all we run in free demo mode.
+const provider =
+  process.env.TUTOR_PROVIDER ||
+  (process.env.GEMINI_API_KEY ? 'gemini' : process.env.ANTHROPIC_API_KEY ? 'anthropic' : 'demo');
+const anthropic = provider === 'anthropic' ? new Anthropic() : null;
+console.log(`Tutor provider: ${provider}`);
 
 // The prompt is what makes this a tutor instead of an answer machine.
 function buildSystemPrompt(question, code) {
@@ -38,19 +42,56 @@ function getDemoReply(question, messages) {
   return `[Demo mode, no API key] Hint ${step}: ${question.hints[step - 1]}`;
 }
 
+async function askAnthropic(system, messages) {
+  const response = await anthropic.messages.create({
+    model: process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5',
+    max_tokens: 500,
+    system,
+    messages,
+  });
+  return response.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+}
+
+// Gemini wants the role "model" instead of "assistant" and alternating turns.
+function toGeminiContents(messages) {
+  const contents = [];
+  for (const m of messages) {
+    const role = m.role === 'assistant' ? 'model' : 'user';
+    const last = contents.at(-1);
+    if (last?.role === role) last.parts[0].text += `\n${m.content}`;
+    else contents.push({ role, parts: [{ text: m.content }] });
+  }
+  return contents;
+}
+
+async function askGemini(system, messages) {
+  const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: system }] },
+      contents: toGeminiContents(messages),
+      generationConfig: {
+        maxOutputTokens: 1000, // generous, because hidden "thinking" can count toward this limit
+        // Only the older 2.5 models accept this switch for turning thinking off
+        ...(model.startsWith('gemini-2.5') && { thinkingConfig: { thinkingBudget: 0 } }),
+      },
+    }),
+  });
+  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  return (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('\n');
+}
+
 export async function getTutorReply(question, messages, code) {
-  if (!client) return getDemoReply(question, messages);
+  if (provider === 'demo') return getDemoReply(question, messages);
+  const system = buildSystemPrompt(question, code);
   try {
-    const response = await client.messages.create({
-      model: MODEL,
-      max_tokens: 500,
-      system: buildSystemPrompt(question, code),
-      messages,
-    });
-    const text = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+    const text = provider === 'gemini' ? await askGemini(system, messages) : await askAnthropic(system, messages);
     return text || 'Let me think about that again. Can you tell me what you have tried so far?';
   } catch (err) {
-    console.error('Tutor error:', err.message);
+    console.error('Tutor error:', err.message); // the real reason shows in the server terminal
     throw new HttpError(502, 'The tutor is unavailable right now. Please try again.');
   }
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getQuestion } from '../api/client.js';
 import ChatPanel from '../components/ChatPanel.jsx';
+import CodeEditor from '../components/CodeEditor.jsx';
 
 export default function QuestionPage() {
   const { id } = useParams();
@@ -28,13 +29,7 @@ export default function QuestionPage() {
           <p>{question.description}</p>
           <pre>{question.examples}</pre>
         </div>
-        <textarea
-          className="editor"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          spellCheck={false}
-          aria-label="Your code"
-        />
+        <CodeEditor value={code} onChange={setCode} />
       </section>
       <ChatPanel questionId={id} code={code} />
     </div>

@@ -66,7 +66,8 @@ function toGeminiContents(messages) {
 
 async function askGemini(system, messages) {
   const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const options = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
     body: JSON.stringify({
@@ -78,10 +79,24 @@ async function askGemini(system, messages) {
         ...(model.startsWith('gemini-2.5') && { thinkingConfig: { thinkingBudget: 0 } }),
       },
     }),
-  });
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  return (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('\n');
+  };
+
+  // Free-tier Gemini is sometimes overloaded (503) or rate limited (429), so try up to 3 times.
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(url, options);
+    if (res.ok) {
+      const data = await res.json();
+      return (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('\n');
+    }
+    const busy = res.status === 503 || res.status === 429;
+    if (busy && attempt < 3) {
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+      continue;
+    }
+    const err = new Error(`Gemini ${res.status}: ${await res.text()}`);
+    err.status = res.status;
+    throw err;
+  }
 }
 
 export async function getTutorReply(question, messages, code) {
@@ -92,6 +107,9 @@ export async function getTutorReply(question, messages, code) {
     return text || 'Let me think about that again. Can you tell me what you have tried so far?';
   } catch (err) {
     console.error('Tutor error:', err.message); // the real reason shows in the server terminal
-    throw new HttpError(502, 'The tutor is unavailable right now. Please try again.');
+    const busy = err.status === 503 || err.status === 429;
+    throw busy
+      ? new HttpError(503, 'The tutor is busy right now. Please try again in a minute.')
+      : new HttpError(502, 'The tutor is unavailable right now. Please try again.');
   }
 }

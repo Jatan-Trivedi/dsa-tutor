@@ -10,7 +10,7 @@ const anthropic = provider === 'anthropic' ? new Anthropic() : null;
 console.log(`Tutor provider: ${provider}`);
 
 // The prompt is what makes this a tutor instead of an answer machine.
-function buildSystemPrompt(question, code) {
+function buildSystemPrompt(question, code, language) {
   return `You are a patient DSA tutor helping a student solve ONE problem. Your job is to guide them to the solution themselves.
 
 PROBLEM: ${question.title}
@@ -22,7 +22,7 @@ ${question.solution}
 HINT LADDER (written by the course author, from gentlest to strongest):
 ${question.hints.map((h, i) => `${i + 1}. ${h}`).join('\n')}
 
-STUDENT'S CURRENT CODE:
+STUDENT'S CURRENT CODE (${language}):
 ${code.trim() || '(nothing written yet)'}
 
 RULES:
@@ -32,6 +32,7 @@ RULES:
 - If their code has a bug, tell them where to look and what to test, not the fix.
 - If they ask for the answer, kindly decline and offer a smaller hint instead.
 - If their approach is correct, say so and ask them about its time and space complexity.
+- The student is coding in ${language}. Use that language's syntax and library names when you talk about their code. The reference solution is in JavaScript, so use it only to judge their idea. Never translate it or copy it.
 - Stay on this problem. Keep replies under 120 words, in plain language.`;
 }
 
@@ -99,9 +100,9 @@ async function askGemini(system, messages) {
   }
 }
 
-export async function getTutorReply(question, messages, code) {
+export async function getTutorReply(question, messages, code, language = 'JavaScript') {
   if (provider === 'demo') return getDemoReply(question, messages);
-  const system = buildSystemPrompt(question, code);
+  const system = buildSystemPrompt(question, code, language);
   try {
     const text = provider === 'gemini' ? await askGemini(system, messages) : await askAnthropic(system, messages);
     return text || 'Let me think about that again. Can you tell me what you have tried so far?';

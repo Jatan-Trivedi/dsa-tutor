@@ -11,5 +11,5 @@ async function request(path, options) {
 
 export const getQuestions = () => request('/questions');
 export const getQuestion = (id) => request(`/questions/${id}`);
-export const askTutor = (id, messages, code) =>
-  request(`/tutor/${id}`, { method: 'POST', body: JSON.stringify({ messages, code }) });
+export const askTutor = (id, messages, code, language) =>
+  request(`/tutor/${id}`, { method: 'POST', body: JSON.stringify({ messages, code, language }) });

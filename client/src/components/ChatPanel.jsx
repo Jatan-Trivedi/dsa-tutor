@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { askTutor } from '../api/client.js';
 
-export default function ChatPanel({ questionId, code }) {
+export default function ChatPanel({ questionId, code, language }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,7 +25,7 @@ export default function ChatPanel({ questionId, code }) {
 
     try {
       // The current code is sent along so the tutor can react to what the student wrote.
-      const { reply } = await askTutor(questionId, updated, code);
+      const { reply } = await askTutor(questionId, updated, code, language);
       setMessages([...updated, { role: 'assistant', content: reply }]);
     } catch (err) {
       setError(err.message);
